@@ -1,85 +1,105 @@
-import React, { useState } from 'react';
-import { 
-  FileText, 
-  Download, 
-  ZoomIn, 
-  ZoomOut, 
-  ChevronLeft, 
+import React, { useState, useEffect } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+import {
+  FileText,
+  Download,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
   ChevronRight,
-  Maximize2 
-} from 'lucide-react';
+  Maximize2,
+} from "lucide-react";
+
+// Set up PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface DocumentViewerProps {
   fileName: string;
+  fileObject: File;
 }
 
-interface Annotation {
-  id: string;
-  page: number;
-  type: 'critical' | 'important' | 'standard';
-  text: string;
-  position: { top: number; left: number; width: number; height: number };
-}
-
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ fileName }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({
+  fileName,
+  fileObject,
+}) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [numPages, setNumPages] = useState<number | null>(null);
   const [zoom, setZoom] = useState(100);
-  const [showAnnotations, setShowAnnotations] = useState(true);
-  
-  const totalPages = 12; // Mock total pages
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock annotations
-  const annotations: Annotation[] = [
-    {
-      id: '1',
-      page: 1,
-      type: 'critical',
-      text: 'Termination clause with 30-day notice requirement',
-      position: { top: 25, left: 10, width: 80, height: 8 }
-    },
-    {
-      id: '2',
-      page: 1,
-      type: 'important',
-      text: 'Payment terms and late fee structure',
-      position: { top: 45, left: 15, width: 70, height: 6 }
-    },
-    {
-      id: '3',
-      page: 2,
-      type: 'critical',
-      text: 'Liability limitation clause',
-      position: { top: 30, left: 20, width: 60, height: 10 }
+  useEffect(() => {
+    // Reset states when file changes
+    setLoading(true);
+    setError(null);
+    setCurrentPage(1);
+    setNumPages(null);
+
+    // Validate file type
+    if (!fileObject.type.includes("pdf")) {
+      setError("Invalid file type. Please upload a PDF file.");
+      setLoading(false);
+      return;
     }
-  ];
 
-  const currentAnnotations = annotations.filter(ann => ann.page === currentPage);
+    console.log("Loading PDF file:", {
+      name: fileObject.name,
+      type: fileObject.type,
+      size: fileObject.size,
+    });
+  }, [fileObject]);
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setLoading(false);
+    setError(null);
+  };
+
+  const onDocumentLoadError = (error: Error) => {
+    console.error("Error loading PDF:", error);
+    let errorMessage = "Failed to load PDF file.";
+
+    if (error.message.includes("Invalid PDF")) {
+      errorMessage = "The file appears to be corrupted or not a valid PDF.";
+    } else if (error.message.includes("fetch")) {
+      errorMessage = "Network error while loading PDF. Please try again.";
+    } else if (error.message.includes("password")) {
+      errorMessage = "This PDF is password protected and cannot be displayed.";
+    } else {
+      errorMessage = `PDF loading error: ${error.message}`;
+    }
+
+    setError(errorMessage);
+    setLoading(false);
+  };
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 25, 200));
+    setZoom((prev) => Math.min(prev + 25, 200));
   };
 
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 25, 50));
+    setZoom((prev) => Math.max(prev - 25, 50));
   };
 
   const handlePreviousPage = () => {
-    setCurrentPage(prev => Math.max(prev - 1, 1));
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
 
   const handleNextPage = () => {
-    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+    setCurrentPage((prev) => Math.min(prev + 1, numPages || 1));
   };
 
-  const getAnnotationColor = (type: Annotation['type']) => {
-    switch (type) {
-      case 'critical':
-        return 'bg-accent-500/20 border-accent-500';
-      case 'important':
-        return 'bg-warning-500/20 border-warning-500';
-      case 'standard':
-        return 'bg-success-500/20 border-success-500';
-    }
+  const handleDownload = () => {
+    const url = URL.createObjectURL(fileObject);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -94,25 +114,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ fileName }) => {
                 {fileName}
               </h3>
               <p className="text-xs text-neutral-600">
-                Page {currentPage} of {totalPages}
+                Page {currentPage} of {numPages || 0}
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setShowAnnotations(!showAnnotations)}
-              className={`
-                px-3 py-1 text-xs rounded-md border transition-colors duration-200
-                ${showAnnotations 
-                  ? 'bg-primary-900 text-white border-primary-900' 
-                  : 'bg-white text-neutral-600 border-neutral-300 hover:border-primary-400'
-                }
-              `}
-            >
-              Highlights
-            </button>
-            <button
+              onClick={handleDownload}
               className="p-2 text-neutral-600 hover:text-primary-900 hover:bg-neutral-100 rounded-lg transition-colors duration-200"
               aria-label="Download document"
             >
@@ -130,57 +139,55 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ fileName }) => {
 
       {/* Document Display Area */}
       <div className="relative bg-neutral-100 h-96 overflow-auto">
-        <div className="relative mx-auto bg-white shadow-lg" style={{ width: `${zoom}%` }}>
-          {/* Mock Document Page */}
-          <div className="aspect-[8.5/11] bg-white p-8 text-sm leading-relaxed relative">
-            <div className="space-y-4 text-neutral-700">
-              <div className="text-center mb-8">
-                <h2 className="text-xl font-bold text-primary-900">SERVICE AGREEMENT</h2>
-                <p className="text-neutral-600 mt-2">Effective Date: January 1, 2025</p>
+        <div className="flex justify-center items-center h-full">
+          {error ? (
+            <div className="text-center p-8">
+              <div className="text-red-600 mb-4">
+                <FileText className="w-12 h-12 mx-auto mb-2" />
               </div>
-              
-              <div className="space-y-3">
-                <p>
-                  This Service Agreement ("Agreement") is entered into between ABC Company ("Provider") 
-                  and XYZ Corporation ("Client") on the date last signed below.
-                </p>
-                
-                <h3 className="font-semibold text-primary-900 mt-6">1. SERVICES</h3>
-                <p>
-                  Provider agrees to provide consulting services as detailed in Exhibit A, 
-                  attached hereto and incorporated by reference.
-                </p>
-                
-                <h3 className="font-semibold text-primary-900 mt-6">2. TERM AND TERMINATION</h3>
-                <p>
-                  This Agreement shall commence on the Effective Date and continue for a period 
-                  of twelve (12) months. Either party may terminate this Agreement with thirty (30) 
-                  days written notice.
-                </p>
-                
-                <h3 className="font-semibold text-primary-900 mt-6">3. PAYMENT TERMS</h3>
-                <p>
-                  Client shall pay Provider monthly fees of $5,000, due within thirty (30) days 
-                  of invoice date. Late payments shall incur a fee of 1.5% per month.
-                </p>
-              </div>
-            </div>
-
-            {/* Annotations Overlay */}
-            {showAnnotations && currentAnnotations.map(annotation => (
-              <div
-                key={annotation.id}
-                className={`absolute border-2 rounded cursor-pointer transition-opacity duration-200 hover:opacity-80 ${getAnnotationColor(annotation.type)}`}
-                style={{
-                  top: `${annotation.position.top}%`,
-                  left: `${annotation.position.left}%`,
-                  width: `${annotation.position.width}%`,
-                  height: `${annotation.position.height}%`,
+              <h3 className="text-lg font-medium text-red-600 mb-2">
+                PDF Loading Error
+              </h3>
+              <p className="text-sm text-neutral-600 mb-4">{error}</p>
+              <button
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
                 }}
-                title={annotation.text}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : loading ? (
+            <div className="text-center p-8">
+              <div className="animate-spin text-primary-600 mb-4">
+                <FileText className="w-12 h-12 mx-auto" />
+              </div>
+              <p className="text-sm text-neutral-600">Loading PDF...</p>
+            </div>
+          ) : (
+            <Document
+              file={fileObject}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={
+                <div className="text-center p-8">
+                  <div className="animate-spin text-primary-600 mb-4">
+                    <FileText className="w-12 h-12 mx-auto" />
+                  </div>
+                  <p className="text-sm text-neutral-600">Loading PDF...</p>
+                </div>
+              }
+              className="max-w-full"
+            >
+              <Page
+                pageNumber={currentPage}
+                scale={zoom / 100}
+                className="shadow-lg"
               />
-            ))}
-          </div>
+            </Document>
+          )}
         </div>
       </div>
 
@@ -197,11 +204,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ fileName }) => {
               <ChevronLeft className="w-4 h-4" />
             </button>
             <span className="text-sm text-neutral-600 min-w-16 text-center">
-              {currentPage} / {totalPages}
+              {currentPage} / {numPages || 0}
             </span>
             <button
               onClick={handleNextPage}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === (numPages || 0)}
               className="p-1 text-neutral-600 hover:text-primary-900 hover:bg-neutral-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               <ChevronRight className="w-4 h-4" />

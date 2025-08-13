@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
-import { 
-  FileText, 
-  Calendar, 
-  Users, 
-  DollarSign, 
+import React, { useState } from "react";
+import {
+  FileText,
+  Calendar,
+  Users,
+  DollarSign,
   Clock,
   ChevronDown,
   ChevronRight,
   BookOpen,
-  Info
-} from 'lucide-react';
+  Info,
+} from "lucide-react";
+import { AnalyzeDocumentResponse } from "../api/types";
 
-const SummaryPanel: React.FC = () => {
+interface SummaryPanelProps {
+  analysisData: AnalyzeDocumentResponse;
+}
+
+const SummaryPanel: React.FC<SummaryPanelProps> = ({ analysisData }) => {
   const [showGlossary, setShowGlossary] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
@@ -19,24 +24,23 @@ const SummaryPanel: React.FC = () => {
     setExpandedSection(expandedSection === section ? null : section);
   };
 
-  const glossaryTerms = [
-    {
-      term: 'Force Majeure',
-      definition: 'Unforeseeable circumstances that prevent a party from fulfilling a contract.'
-    },
-    {
-      term: 'Indemnification',
-      definition: 'Protection against financial loss, typically through compensation.'
-    },
-    {
-      term: 'Liquidated Damages',
-      definition: 'Pre-agreed compensation amount for specific breaches of contract.'
-    },
-    {
-      term: 'Warranty',
-      definition: 'A guarantee or assurance about the quality or condition of services/products.'
-    }
-  ];
+  // Extract data from API response
+  const { summary } = analysisData;
+  const { important_contract_terms, key_data_points, legal_terms_glossary } =
+    summary;
+
+  // Convert glossary object to array for rendering
+  const glossaryTerms = Object.entries(legal_terms_glossary).map(
+    ([term, definition]) => ({
+      term,
+      definition: definition || "Definition not available",
+    })
+  );
+
+  // Split summary by line breaks to preserve original formatting
+  const summaryLines = summary.summary
+    .split("\n")
+    .filter((line) => line.trim().length > 0);
 
   return (
     <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
@@ -57,19 +61,20 @@ const SummaryPanel: React.FC = () => {
             Plain English Summary
           </h3>
           <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 space-y-3">
-            <p className="text-primary-800 leading-relaxed">
-              This is a service agreement between ABC Company (the service provider) and XYZ Corporation 
-              (the client) for consulting services. The contract runs for 12 months starting January 1, 2025.
-            </p>
-            <p className="text-primary-800 leading-relaxed">
-              The client will pay $5,000 monthly, with late payments incurring a 1.5% monthly fee. 
-              Either party can end the contract with 30 days written notice. The agreement includes 
-              standard liability protections and confidentiality requirements.
-            </p>
-            <p className="text-primary-800 leading-relaxed">
-              <strong>Key takeaway:</strong> This is a fairly standard consulting agreement with reasonable 
-              terms for both parties, though you should pay attention to the termination and payment clauses.
-            </p>
+            {summaryLines.map((line, index) => {
+              // Check if line starts with a number (topic line)
+              const isTopicLine = /^\d+\./.test(line.trim());
+
+              return (
+                <p key={index} className="text-primary-800 leading-relaxed">
+                  {isTopicLine ? (
+                    <span className="font-bold">{line}</span>
+                  ) : (
+                    line
+                  )}
+                </p>
+              );
+            })}
           </div>
         </div>
 
@@ -79,18 +84,30 @@ const SummaryPanel: React.FC = () => {
             <div className="flex items-start space-x-3">
               <Users className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium text-neutral-900">Parties Involved</h4>
-                <p className="text-sm text-neutral-600">ABC Company (Provider)</p>
-                <p className="text-sm text-neutral-600">XYZ Corporation (Client)</p>
+                <h4 className="font-medium text-neutral-900">
+                  Parties Involved
+                </h4>
+                {key_data_points.parties_involved.map((party, index) => (
+                  <p key={index} className="text-sm text-neutral-600">
+                    {party.name} ({party.role})
+                  </p>
+                ))}
               </div>
             </div>
 
             <div className="flex items-start space-x-3">
               <Calendar className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium text-neutral-900">Contract Period</h4>
-                <p className="text-sm text-neutral-600">Jan 1, 2025 - Dec 31, 2025</p>
-                <p className="text-sm text-neutral-600">12-month term</p>
+                <h4 className="font-medium text-neutral-900">
+                  Contract Period
+                </h4>
+                <p className="text-sm text-neutral-600">
+                  {key_data_points.contract_period.start_date} -{" "}
+                  {key_data_points.contract_period.end_date}
+                </p>
+                <p className="text-sm text-neutral-600">
+                  {key_data_points.contract_period.term_description}
+                </p>
               </div>
             </div>
           </div>
@@ -99,9 +116,14 @@ const SummaryPanel: React.FC = () => {
             <div className="flex items-start space-x-3">
               <DollarSign className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium text-neutral-900">Financial Terms</h4>
-                <p className="text-sm text-neutral-600">$5,000 monthly</p>
-                <p className="text-sm text-neutral-600">1.5% late fee per month</p>
+                <h4 className="font-medium text-neutral-900">
+                  Financial Terms
+                </h4>
+                {key_data_points.financial_terms.map((term, index) => (
+                  <p key={index} className="text-sm text-neutral-600">
+                    {term}
+                  </p>
+                ))}
               </div>
             </div>
 
@@ -109,8 +131,11 @@ const SummaryPanel: React.FC = () => {
               <Clock className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-medium text-neutral-900">Key Deadlines</h4>
-                <p className="text-sm text-neutral-600">30-day termination notice</p>
-                <p className="text-sm text-neutral-600">30-day payment terms</p>
+                {key_data_points.key_deadlines.map((deadline, index) => (
+                  <p key={index} className="text-sm text-neutral-600">
+                    {deadline}
+                  </p>
+                ))}
               </div>
             </div>
           </div>
@@ -121,39 +146,35 @@ const SummaryPanel: React.FC = () => {
           {/* Key Terms Section */}
           <div className="border border-neutral-200 rounded-lg">
             <button
-              onClick={() => toggleSection('terms')}
+              onClick={() => toggleSection("terms")}
               className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-neutral-50 transition-colors duration-200"
             >
               <div className="flex items-center space-x-3">
                 <BookOpen className="w-4 h-4 text-neutral-600" />
-                <span className="font-medium text-neutral-900">Important Contract Terms</span>
+                <span className="font-medium text-neutral-900">
+                  Important Contract Terms
+                </span>
               </div>
-              {expandedSection === 'terms' ? (
+              {expandedSection === "terms" ? (
                 <ChevronDown className="w-4 h-4 text-neutral-500" />
               ) : (
                 <ChevronRight className="w-4 h-4 text-neutral-500" />
               )}
             </button>
-            
-            {expandedSection === 'terms' && (
+
+            {expandedSection === "terms" && (
               <div className="px-4 pb-4 space-y-3 border-t border-neutral-200 bg-neutral-50/50">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                  <div>
-                    <h5 className="font-medium text-neutral-900 mb-2">Service Scope</h5>
-                    <p className="text-sm text-neutral-600">Consulting services as defined in Exhibit A</p>
-                  </div>
-                  <div>
-                    <h5 className="font-medium text-neutral-900 mb-2">Governing Law</h5>
-                    <p className="text-sm text-neutral-600">Delaware State Law</p>
-                  </div>
-                  <div>
-                    <h5 className="font-medium text-neutral-900 mb-2">Confidentiality</h5>
-                    <p className="text-sm text-neutral-600">Standard NDA provisions apply</p>
-                  </div>
-                  <div>
-                    <h5 className="font-medium text-neutral-900 mb-2">Intellectual Property</h5>
-                    <p className="text-sm text-neutral-600">Work product ownership defined</p>
-                  </div>
+                  {Object.entries(important_contract_terms).map(
+                    ([key, value]) => (
+                      <div key={key}>
+                        <h5 className="font-medium text-neutral-900 mb-2">
+                          {key}
+                        </h5>
+                        <p className="text-sm text-neutral-600">{value}</p>
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -162,38 +183,56 @@ const SummaryPanel: React.FC = () => {
           {/* Document Type Section */}
           <div className="border border-neutral-200 rounded-lg">
             <button
-              onClick={() => toggleSection('type')}
+              onClick={() => toggleSection("type")}
               className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-neutral-50 transition-colors duration-200"
             >
               <div className="flex items-center space-x-3">
                 <Info className="w-4 h-4 text-neutral-600" />
-                <span className="font-medium text-neutral-900">Document Classification</span>
+                <span className="font-medium text-neutral-900">
+                  Document Classification
+                </span>
               </div>
-              {expandedSection === 'type' ? (
+              {expandedSection === "type" ? (
                 <ChevronDown className="w-4 h-4 text-neutral-500" />
               ) : (
                 <ChevronRight className="w-4 h-4 text-neutral-500" />
               )}
             </button>
-            
-            {expandedSection === 'type' && (
+
+            {expandedSection === "type" && (
               <div className="px-4 pb-4 border-t border-neutral-200 bg-neutral-50/50 pt-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">Document Type:</span>
-                    <span className="text-sm font-medium text-primary-900">Service Agreement</span>
+                    <span className="text-sm text-neutral-600">
+                      Document Type:
+                    </span>
+                    <span className="text-sm font-medium text-primary-900">
+                      Service Agreement
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">Complexity Level:</span>
-                    <span className="text-sm font-medium text-success-600">Standard</span>
+                    <span className="text-sm text-neutral-600">
+                      Complexity Level:
+                    </span>
+                    <span className="text-sm font-medium text-success-600">
+                      Standard
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">Page Count:</span>
-                    <span className="text-sm font-medium text-neutral-900">12 pages</span>
+                    <span className="text-sm text-neutral-600">
+                      Page Count:
+                    </span>
+                    <span className="text-sm font-medium text-neutral-900">
+                      12 pages
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">Last Modified:</span>
-                    <span className="text-sm font-medium text-neutral-900">December 15, 2024</span>
+                    <span className="text-sm text-neutral-600">
+                      Last Modified:
+                    </span>
+                    <span className="text-sm font-medium text-neutral-900">
+                      December 15, 2024
+                    </span>
                   </div>
                 </div>
               </div>
@@ -209,7 +248,7 @@ const SummaryPanel: React.FC = () => {
           >
             <BookOpen className="w-4 h-4" />
             <span className="font-medium">
-              {showGlossary ? 'Hide' : 'Show'} Legal Terms Glossary
+              {showGlossary ? "Hide" : "Show"} Legal Terms Glossary
             </span>
             {showGlossary ? (
               <ChevronDown className="w-4 h-4" />
@@ -221,8 +260,13 @@ const SummaryPanel: React.FC = () => {
           {showGlossary && (
             <div className="mt-4 bg-neutral-50 rounded-lg p-4 space-y-3 animate-slide-up">
               {glossaryTerms.map((item, index) => (
-                <div key={index} className="border-b border-neutral-200 pb-3 last:border-b-0 last:pb-0">
-                  <h4 className="font-medium text-neutral-900 mb-1">{item.term}</h4>
+                <div
+                  key={index}
+                  className="border-b border-neutral-200 pb-3 last:border-b-0 last:pb-0"
+                >
+                  <h4 className="font-medium text-neutral-900 mb-1">
+                    {item.term}
+                  </h4>
                   <p className="text-sm text-neutral-600">{item.definition}</p>
                 </div>
               ))}
