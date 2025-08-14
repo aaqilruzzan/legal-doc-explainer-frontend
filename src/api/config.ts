@@ -10,4 +10,6 @@ export const API_CONFIG = {
 // API Endpoints
 export const API_ENDPOINTS = {
   ANALYZE: "/analyze",
+  ASK: "/ask",
+  HIGHLIGHTS: "/highlights",
 } as const;

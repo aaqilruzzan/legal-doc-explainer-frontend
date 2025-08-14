@@ -4,12 +4,15 @@ import SummaryPanel from "./SummaryPanel";
 import RiskAnalysis from "./RiskAnalysis";
 import QAInterface from "./QAInterface";
 import { AnalyzeDocumentResponse } from "../api/types";
+import { Loader2 } from "lucide-react";
 
 interface ResultsDashboardProps {
   fileName: string;
   fileObject: File;
   analysisData: AnalyzeDocumentResponse;
 }
+
+type RiskState = "hidden" | "loading" | "visible";
 
 const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   fileName,
@@ -19,6 +22,16 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<"summary" | "risks" | "qa">(
     "summary"
   );
+  const [riskState, setRiskState] = useState<RiskState>("hidden");
+
+  const handleGenerateRisks = () => {
+    setRiskState("loading");
+
+    // Simulate API call delay - replace with actual API call later
+    setTimeout(() => {
+      setRiskState("visible");
+    }, 3000); // 3 second delay to simulate loading
+  };
 
   return (
     <div className="animate-fade-in">
@@ -46,16 +59,18 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           >
             Summary
           </button>
-          <button
-            onClick={() => setActiveTab("risks")}
-            className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors duration-200 ${
-              activeTab === "risks"
-                ? "bg-primary-900 text-white"
-                : "text-neutral-600 hover:text-primary-900"
-            }`}
-          >
-            Risk Analysis
-          </button>
+          {riskState === "visible" && (
+            <button
+              onClick={() => setActiveTab("risks")}
+              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors duration-200 ${
+                activeTab === "risks"
+                  ? "bg-primary-900 text-white"
+                  : "text-neutral-600 hover:text-primary-900"
+              }`}
+            >
+              Risk Analysis
+            </button>
+          )}
           <button
             onClick={() => setActiveTab("qa")}
             className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors duration-200 ${
@@ -78,9 +93,31 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
 
         {/* Analysis Panels */}
         <div className="md:col-span-7 space-y-8">
-          <SummaryPanel analysisData={analysisData} />
-          <RiskAnalysis />
-          <QAInterface />
+          <SummaryPanel
+            analysisData={analysisData}
+            onGenerateRisks={handleGenerateRisks}
+          />
+
+          {/* Loading State */}
+          {riskState === "loading" && (
+            <div className="bg-white rounded-xl border border-neutral-200 p-8">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+                <p className="text-neutral-600 font-medium">
+                  Loading risks and highlights...
+                </p>
+                <p className="text-sm text-neutral-500">
+                  Analyzing document clauses and identifying potential risks
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Risk Analysis - Only show when visible */}
+          {riskState === "visible" && <RiskAnalysis />}
+
+          {/* Q&A Interface - Always visible, but positioned based on risk state */}
+          <QAInterface namespace={analysisData.namespace} />
         </div>
       </div>
 
@@ -91,10 +128,34 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         </div>
 
         {activeTab === "summary" && (
-          <SummaryPanel analysisData={analysisData} />
+          <div className="space-y-6">
+            <SummaryPanel
+              analysisData={analysisData}
+              onGenerateRisks={handleGenerateRisks}
+            />
+
+            {/* Loading State */}
+            {riskState === "loading" && (
+              <div className="bg-white rounded-xl border border-neutral-200 p-8">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+                  <p className="text-neutral-600 font-medium">
+                    Loading risks and highlights...
+                  </p>
+                  <p className="text-sm text-neutral-500">
+                    Analyzing document clauses and identifying potential risks
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         )}
-        {activeTab === "risks" && <RiskAnalysis />}
-        {activeTab === "qa" && <QAInterface />}
+
+        {activeTab === "risks" && riskState === "visible" && <RiskAnalysis />}
+
+        {activeTab === "qa" && (
+          <QAInterface namespace={analysisData.namespace} />
+        )}
       </div>
     </div>
   );

@@ -14,9 +14,13 @@ import { AnalyzeDocumentResponse } from "../api/types";
 
 interface SummaryPanelProps {
   analysisData: AnalyzeDocumentResponse;
+  onGenerateRisks?: () => void;
 }
 
-const SummaryPanel: React.FC<SummaryPanelProps> = ({ analysisData }) => {
+const SummaryPanel: React.FC<SummaryPanelProps> = ({
+  analysisData,
+  onGenerateRisks,
+}) => {
   const [showGlossary, setShowGlossary] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
@@ -315,8 +319,11 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ analysisData }) => {
 
         {/* Action Button */}
         <div className="pt-4 border-t border-neutral-200">
-          <button className="w-full py-3 px-4 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors duration-200 font-medium">
-            Simplify Language Further
+          <button
+            onClick={onGenerateRisks}
+            className="w-full py-3 px-4 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors duration-200 font-medium"
+          >
+            Generate Risks and Highlights
           </button>
         </div>
       </div>

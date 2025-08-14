@@ -1,5 +1,12 @@
 import { API_CONFIG, API_ENDPOINTS } from "./config";
-import { AnalyzeDocumentResponse } from "./types";
+import {
+  AnalyzeDocumentResponse,
+  AskQuestionRequest,
+  AskQuestionResponse,
+  ApiError,
+  HighlightsRequest,
+  HighlightsResponse,
+} from "./types";
 
 // Request payload for the analyze endpoint
 export const analyzeDocumentRequest = async (
@@ -47,6 +54,113 @@ export const analyzeDocumentRequest = async (
     }
     throw new Error(
       "An unexpected error occurred while analyzing the document."
+    );
+  }
+};
+
+// Ask follow-up question about analyzed document
+export const askQuestionRequest = async (
+  query: string,
+  namespace: string
+): Promise<AskQuestionResponse> => {
+  const requestBody: AskQuestionRequest = {
+    query,
+    namespace,
+  };
+
+  // Create an AbortController for timeout handling
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(
+    () => abortController.abort(),
+    30000 // 30 seconds timeout for questions
+  );
+
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${API_ENDPOINTS.ASK}`, {
+      method: "POST",
+      headers: API_CONFIG.HEADERS,
+      body: JSON.stringify(requestBody),
+      signal: abortController.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = (await response.json()) as ApiError;
+      throw new Error(
+        `HTTP error! status: ${response.status}, message: ${
+          errorData.error || "Unknown error"
+        }`
+      );
+    }
+
+    return (await response.json()) as AskQuestionResponse;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error) {
+      if (error.name === "AbortError") {
+        throw new Error(
+          "Request timed out. Please try asking your question again."
+        );
+      }
+      throw error;
+    }
+    throw new Error(
+      "An unexpected error occurred while processing your question."
+    );
+  }
+};
+
+// Get document highlights and key clauses analysis
+export const getDocumentHighlights = async (
+  namespace: string
+): Promise<HighlightsResponse> => {
+  const requestBody: HighlightsRequest = {
+    namespace,
+  };
+
+  // Create an AbortController for timeout handling
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(
+    () => abortController.abort(),
+    45000 // 45 seconds timeout for highlights analysis
+  );
+
+  try {
+    const response = await fetch(
+      `${API_CONFIG.BASE_URL}${API_ENDPOINTS.HIGHLIGHTS}`,
+      {
+        method: "POST",
+        headers: API_CONFIG.HEADERS,
+        body: JSON.stringify(requestBody),
+        signal: abortController.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = (await response.json()) as ApiError;
+      throw new Error(
+        `HTTP error! status: ${response.status}, message: ${
+          errorData.error || "Unknown error"
+        }`
+      );
+    }
+
+    return (await response.json()) as HighlightsResponse;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error) {
+      if (error.name === "AbortError") {
+        throw new Error(
+          "Request timed out. The highlights analysis is taking longer than expected. Please try again."
+        );
+      }
+      throw error;
+    }
+    throw new Error(
+      "An unexpected error occurred while generating document highlights."
     );
   }
 };

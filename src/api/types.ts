@@ -1,6 +1,7 @@
 // Type definitions for API responses
 
 export interface AnalyzeDocumentResponse {
+  namespace: string; // Added namespace for follow-up questions
   summary: {
     important_contract_terms: {
       [key: string]: string;
@@ -66,4 +67,44 @@ export interface DocumentSummary {
 
 export interface AnalyzeDocumentResponseTyped {
   summary: DocumentSummary;
+}
+
+// Types for Ask Question functionality
+export interface AskQuestionRequest {
+  query: string;
+  namespace: string;
+}
+
+export interface AskQuestionResponse {
+  answer: string;
+}
+
+export interface ApiError {
+  error: string;
+}
+
+// Types for Highlights functionality
+export type RiskLevel = "critical" | "high" | "medium" | "low";
+export type ConfidenceLevel = "high" | "medium" | "low";
+
+export interface ClauseDetails {
+  clause: {
+    heading: string;
+    description: string; // max 30 words
+  };
+  recommendation: string; // max 20 words
+  risk: RiskLevel;
+  confidence: ConfidenceLevel;
+}
+
+export interface HighlightsResponse {
+  termination: ClauseDetails;
+  financial: ClauseDetails;
+  liability: ClauseDetails;
+  renewal: ClauseDetails;
+  service: ClauseDetails;
+}
+
+export interface HighlightsRequest {
+  namespace: string;
 }
