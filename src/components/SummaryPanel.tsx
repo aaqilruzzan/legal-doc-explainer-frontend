@@ -26,6 +26,7 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ analysisData }) => {
 
   // Extract data from API response
   const { summary } = analysisData;
+  console.log("Summary Data:", summary);
   const { important_contract_terms, key_data_points, legal_terms_glossary } =
     summary;
 
@@ -81,63 +82,101 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ analysisData }) => {
         {/* Document Metadata */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <Users className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-neutral-900">
-                  Parties Involved
-                </h4>
-                {key_data_points.parties_involved.map((party, index) => (
-                  <p key={index} className="text-sm text-neutral-600">
-                    {party.name} ({party.role})
-                  </p>
-                ))}
-              </div>
-            </div>
+            {/* Parties Involved - only show if there are parties */}
+            {key_data_points.parties_involved &&
+              key_data_points.parties_involved.length > 0 && (
+                <div className="flex items-start space-x-3">
+                  <Users className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-neutral-900">
+                      Parties Involved
+                    </h4>
+                    {key_data_points.parties_involved.map((party, index) => (
+                      <p key={index} className="text-sm text-neutral-600">
+                        {party.name} ({party.role})
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            <div className="flex items-start space-x-3">
-              <Calendar className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-neutral-900">
-                  Contract Period
-                </h4>
-                <p className="text-sm text-neutral-600">
-                  {key_data_points.contract_period.start_date} -{" "}
-                  {key_data_points.contract_period.end_date}
-                </p>
-                <p className="text-sm text-neutral-600">
-                  {key_data_points.contract_period.term_description}
-                </p>
+            {/* Contract Period - only show if there's date or term info */}
+            {(key_data_points.contract_period.start_date ||
+              key_data_points.contract_period.end_date ||
+              key_data_points.contract_period.term_description) && (
+              <div className="flex items-start space-x-3">
+                <Calendar className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-neutral-900">
+                    Contract Period
+                  </h4>
+                  {(key_data_points.contract_period.start_date ||
+                    key_data_points.contract_period.end_date) && (
+                    <p className="text-sm text-neutral-600">
+                      {(() => {
+                        const startDate =
+                          key_data_points.contract_period.start_date;
+                        const endDate =
+                          key_data_points.contract_period.end_date;
+
+                        if (startDate && endDate) {
+                          return `${startDate} - ${endDate}`;
+                        } else if (startDate && !endDate) {
+                          return `As of ${startDate}`;
+                        } else if (!startDate && endDate) {
+                          return `Up until ${endDate}`;
+                        } else {
+                          return "Date information not available";
+                        }
+                      })()}
+                    </p>
+                  )}
+                  {key_data_points.contract_period.term_description && (
+                    <p className="text-sm text-neutral-600">
+                      {key_data_points.contract_period.term_description}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <DollarSign className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-neutral-900">
-                  Financial Terms
-                </h4>
-                {key_data_points.financial_terms.map((term, index) => (
-                  <p key={index} className="text-sm text-neutral-600">
-                    {term}
-                  </p>
-                ))}
-              </div>
-            </div>
+            {/* Financial Terms - only show if there are terms */}
+            {key_data_points.financial_terms &&
+              key_data_points.financial_terms.length > 0 && (
+                <div className="flex items-start space-x-3">
+                  <DollarSign className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-neutral-900">
+                      Financial Terms
+                    </h4>
+                    {key_data_points.financial_terms.map((term, index) => (
+                      <p key={index} className="text-sm text-neutral-600">
+                        {term}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            <div className="flex items-start space-x-3">
-              <Clock className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-neutral-900">Key Deadlines</h4>
-                {key_data_points.key_deadlines.map((deadline, index) => (
-                  <p key={index} className="text-sm text-neutral-600">
-                    {deadline}
-                  </p>
-                ))}
-              </div>
-            </div>
+            {/* Key Deadlines - only show if there are deadlines */}
+            {key_data_points.key_deadlines &&
+              key_data_points.key_deadlines.length > 0 && (
+                <div className="flex items-start space-x-3">
+                  <Clock className="w-5 h-5 text-secondary-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-neutral-900">
+                      Key Deadlines
+                    </h4>
+                    {key_data_points.key_deadlines.map((deadline, index) => (
+                      <p key={index} className="text-sm text-neutral-600">
+                        {deadline}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
           </div>
         </div>
 

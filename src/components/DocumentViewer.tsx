@@ -4,51 +4,165 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import {
   FileText,
-  Download,
-  ZoomIn,
-  ZoomOut,
   ChevronLeft,
   ChevronRight,
-  Maximize2,
+  ZoomIn,
+  ZoomOut,
+  Download,
 } from "lucide-react";
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 interface DocumentViewerProps {
   fileName: string;
   fileObject: File;
 }
 
+// Zoom Controls Component
+interface ZoomControlsProps {
+  scale: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+}
+
+const ZoomControls: React.FC<ZoomControlsProps> = ({
+  scale,
+  onZoomIn,
+  onZoomOut,
+}) => (
+  <div className="flex items-center">
+    <button
+      onClick={onZoomOut}
+      className="p-1 hover:bg-neutral-100 rounded transition-colors"
+      disabled={scale <= 0.5}
+      title="Zoom Out"
+    >
+      <ZoomOut className="w-3 h-3" />
+    </button>
+    <span className="text-xs text-neutral-600 min-w-[35px] text-center px-0.5">
+      {Math.round(scale * 100)}%
+    </span>
+    <button
+      onClick={onZoomIn}
+      className="p-1 hover:bg-neutral-100 rounded transition-colors"
+      disabled={scale >= 2.0}
+      title="Zoom In"
+    >
+      <ZoomIn className="w-3 h-3" />
+    </button>
+  </div>
+);
+
+// Page Navigation Component
+interface PageNavigationProps {
+  pageNumber: number;
+  numPages: number;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+}
+
+const PageNavigation: React.FC<PageNavigationProps> = ({
+  pageNumber,
+  numPages,
+  onPreviousPage,
+  onNextPage,
+}) => (
+  <div className="flex items-center">
+    <button
+      onClick={onPreviousPage}
+      disabled={pageNumber <= 1}
+      className="p-1 hover:bg-neutral-100 rounded disabled:opacity-50 transition-colors"
+      title="Previous Page"
+    >
+      <ChevronLeft className="w-3 h-3" />
+    </button>
+    <span className="text-xs text-neutral-600 min-w-[45px] text-center px-0.5">
+      {pageNumber}/{numPages}
+    </span>
+    <button
+      onClick={onNextPage}
+      disabled={pageNumber >= numPages}
+      className="p-1 hover:bg-neutral-100 rounded disabled:opacity-50 transition-colors"
+      title="Next Page"
+    >
+      <ChevronRight className="w-3 h-3" />
+    </button>
+  </div>
+);
+
+// Document Actions Component
+interface DocumentActionsProps {
+  onDownload: () => void;
+}
+
+const DocumentActions: React.FC<DocumentActionsProps> = ({ onDownload }) => (
+  <div className="flex items-center space-x-2">
+    <button
+      onClick={onDownload}
+      className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+      title="Download Document"
+    >
+      <Download className="w-4 h-4" />
+    </button>
+  </div>
+);
+
+// Toolbar Component
+interface ToolbarProps {
+  scale: number;
+  pageNumber: number;
+  numPages: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+  onDownload: () => void;
+}
+
+const Toolbar: React.FC<ToolbarProps> = ({
+  scale,
+  pageNumber,
+  numPages,
+  onZoomIn,
+  onZoomOut,
+  onPreviousPage,
+  onNextPage,
+  onDownload,
+}) => (
+  <div className="flex items-center space-x-4">
+    <DocumentActions onDownload={onDownload} />
+    <div className="w-px h-6 bg-neutral-300" />
+    <ZoomControls scale={scale} onZoomIn={onZoomIn} onZoomOut={onZoomOut} />
+    <div className="w-px h-6 bg-neutral-300" />
+    <PageNavigation
+      pageNumber={pageNumber}
+      numPages={numPages}
+      onPreviousPage={onPreviousPage}
+      onNextPage={onNextPage}
+    />
+  </div>
+);
+
 const DocumentViewer: React.FC<DocumentViewerProps> = ({
   fileName,
   fileObject,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [zoom, setZoom] = useState(100);
-  const [loading, setLoading] = useState(true);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [scale, setScale] = useState<number>(1.0);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [fileUrl, setFileUrl] = useState<string>("");
 
   useEffect(() => {
-    // Reset states when file changes
-    setLoading(true);
-    setError(null);
-    setCurrentPage(1);
-    setNumPages(null);
-
-    // Validate file type
-    if (!fileObject.type.includes("pdf")) {
-      setError("Invalid file type. Please upload a PDF file.");
-      setLoading(false);
-      return;
+    if (fileObject) {
+      const url = URL.createObjectURL(fileObject);
+      setFileUrl(url);
+      return () => URL.revokeObjectURL(url);
     }
-
-    console.log("Loading PDF file:", {
-      name: fileObject.name,
-      type: fileObject.type,
-      size: fileObject.size,
-    });
   }, [fileObject]);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -58,183 +172,107 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
   };
 
   const onDocumentLoadError = (error: Error) => {
-    console.error("Error loading PDF:", error);
-    let errorMessage = "Failed to load PDF file.";
-
-    if (error.message.includes("Invalid PDF")) {
-      errorMessage = "The file appears to be corrupted or not a valid PDF.";
-    } else if (error.message.includes("fetch")) {
-      errorMessage = "Network error while loading PDF. Please try again.";
-    } else if (error.message.includes("password")) {
-      errorMessage = "This PDF is password protected and cannot be displayed.";
-    } else {
-      errorMessage = `PDF loading error: ${error.message}`;
-    }
-
-    setError(errorMessage);
+    setError(error.message);
     setLoading(false);
   };
 
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 25, 200));
+  const changePage = (offset: number) => {
+    setPageNumber((prevPageNumber) => {
+      const newPageNumber = prevPageNumber + offset;
+      return Math.min(Math.max(1, newPageNumber), numPages);
+    });
   };
 
-  const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 25, 50));
+  const previousPage = () => changePage(-1);
+  const nextPage = () => changePage(1);
+
+  const zoomIn = () => setScale((prev) => Math.min(prev + 0.2, 2.0));
+  const zoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5));
+
+  const downloadDocument = () => {
+    if (fileObject) {
+      const url = URL.createObjectURL(fileObject);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
-  const handlePreviousPage = () => {
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleNextPage = () => {
-    setCurrentPage((prev) => Math.min(prev + 1, numPages || 1));
-  };
-
-  const handleDownload = () => {
-    const url = URL.createObjectURL(fileObject);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+  if (error) {
+    return (
+      <div className="hidden lg:flex bg-white rounded-xl border border-neutral-200 overflow-hidden flex-col h-full">
+        <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50">
+          <div className="flex items-center space-x-3">
+            <FileText className="w-5 h-5 text-primary-900" />
+            <h3 className="font-medium text-primary-900">{fileName}</h3>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <FileText className="w-16 h-16 mx-auto mb-4 text-red-300" />
+            <p className="text-red-600 font-medium mb-2">Failed to load PDF</p>
+            <p className="text-sm text-gray-600">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-      {/* Viewer Header */}
+    <div className="hidden md:flex bg-white rounded-xl border border-neutral-200 overflow-hidden flex-col h-full">
+      {/* Header */}
       <div className="px-4 py-3 border-b border-neutral-200 bg-neutral-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <FileText className="w-5 h-5 text-primary-900" />
-            <div>
-              <h3 className="font-medium text-primary-900 truncate max-w-48">
-                {fileName}
-              </h3>
-              <p className="text-xs text-neutral-600">
-                Page {currentPage} of {numPages || 0}
-              </p>
-            </div>
+            <h3 className="font-medium text-primary-900">{fileName}</h3>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleDownload}
-              className="p-2 text-neutral-600 hover:text-primary-900 hover:bg-neutral-100 rounded-lg transition-colors duration-200"
-              aria-label="Download document"
-            >
-              <Download className="w-4 h-4" />
-            </button>
-            <button
-              className="p-2 text-neutral-600 hover:text-primary-900 hover:bg-neutral-100 rounded-lg transition-colors duration-200"
-              aria-label="Fullscreen view"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Document Display Area */}
-      <div className="relative bg-neutral-100 h-96 overflow-auto">
-        <div className="flex justify-center items-center h-full">
-          {error ? (
-            <div className="text-center p-8">
-              <div className="text-red-600 mb-4">
-                <FileText className="w-12 h-12 mx-auto mb-2" />
-              </div>
-              <h3 className="text-lg font-medium text-red-600 mb-2">
-                PDF Loading Error
-              </h3>
-              <p className="text-sm text-neutral-600 mb-4">{error}</p>
-              <button
-                onClick={() => {
-                  setError(null);
-                  setLoading(true);
-                }}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                Retry
-              </button>
-            </div>
-          ) : loading ? (
-            <div className="text-center p-8">
-              <div className="animate-spin text-primary-600 mb-4">
-                <FileText className="w-12 h-12 mx-auto" />
-              </div>
-              <p className="text-sm text-neutral-600">Loading PDF...</p>
-            </div>
-          ) : (
-            <Document
-              file={fileObject}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              loading={
-                <div className="text-center p-8">
-                  <div className="animate-spin text-primary-600 mb-4">
-                    <FileText className="w-12 h-12 mx-auto" />
-                  </div>
-                  <p className="text-sm text-neutral-600">Loading PDF...</p>
-                </div>
-              }
-              className="max-w-full"
-            >
-              <Page
-                pageNumber={currentPage}
-                scale={zoom / 100}
-                className="shadow-lg"
-              />
-            </Document>
+          {/* Controls */}
+          {!loading && numPages > 0 && (
+            <Toolbar
+              scale={scale}
+              pageNumber={pageNumber}
+              numPages={numPages}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
+              onPreviousPage={previousPage}
+              onNextPage={nextPage}
+              onDownload={downloadDocument}
+            />
           )}
         </div>
       </div>
 
-      {/* Viewer Controls */}
-      <div className="px-4 py-3 border-t border-neutral-200 bg-neutral-50">
-        <div className="flex items-center justify-between">
-          {/* Page Navigation */}
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handlePreviousPage}
-              disabled={currentPage === 1}
-              className="p-1 text-neutral-600 hover:text-primary-900 hover:bg-neutral-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm text-neutral-600 min-w-16 text-center">
-              {currentPage} / {numPages || 0}
-            </span>
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage === (numPages || 0)}
-              className="p-1 text-neutral-600 hover:text-primary-900 hover:bg-neutral-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Zoom Controls */}
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleZoomOut}
-              disabled={zoom <= 50}
-              className="p-1 text-neutral-600 hover:text-primary-900 hover:bg-neutral-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <span className="text-sm text-neutral-600 min-w-12 text-center">
-              {zoom}%
-            </span>
-            <button
-              onClick={handleZoomIn}
-              disabled={zoom >= 200}
-              className="p-1 text-neutral-600 hover:text-primary-900 hover:bg-neutral-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          </div>
+      {/* PDF Viewer */}
+      <div className="flex-1 overflow-auto bg-neutral-100">
+        <div className="flex justify-center p-4">
+          <Document
+            file={fileUrl}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading={
+              <div className="flex items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Loading PDF...</span>
+              </div>
+            }
+          >
+            <Page
+              pageNumber={pageNumber}
+              scale={scale}
+              className="shadow-lg"
+              loading={
+                <div className="flex items-center justify-center h-96">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                </div>
+              }
+            />
+          </Document>
         </div>
       </div>
     </div>
