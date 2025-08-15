@@ -1,154 +1,21 @@
-import { useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import DocumentUpload from "./components/DocumentUpload";
 import ProcessingState from "./components/ProcessingState";
 import ResultsDashboard from "./components/ResultsDashboard";
-import { analyzeDocumentRequest } from "./api/analyzeRequest";
-import { AnalyzeDocumentResponse } from "./api/types";
-
-type AppState = "upload" | "processing" | "results" | "error";
-
-interface ProcessingStep {
-  id: string;
-  label: string;
-  completed: boolean;
-  current: boolean;
-}
+import { useDocumentAnalysis } from "./hooks/useDocumentAnalysis";
 
 function App() {
-  const [appState, setAppState] = useState<AppState>("upload");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [apiResponse, setApiResponse] =
-    useState<AnalyzeDocumentResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([
-    {
-      id: "upload",
-      label: "Uploading document...",
-      completed: false,
-      current: false,
-    },
-    {
-      id: "extract",
-      label: "Extracting text content...",
-      completed: false,
-      current: false,
-    },
-    {
-      id: "analyze",
-      label: "Analyzing legal structure...",
-      completed: false,
-      current: false,
-    },
-    {
-      id: "identify",
-      label: "Identifying key clauses and terms...",
-      completed: false,
-      current: false,
-    },
-    {
-      id: "compile",
-      label: "Compiling insights and summary...",
-      completed: false,
-      current: false,
-    },
-  ]);
-
-  const handleFileUpload = (file: File) => {
-    setUploadedFile(file);
-    setAppState("processing");
-    setError(null);
-    processDocumentWithAPI(file);
-  };
-
-  const processDocumentWithAPI = async (file: File) => {
-    const steps = [...processingSteps];
-
-    const updateStep = (
-      index: number,
-      current: boolean,
-      completed: boolean = false
-    ) => {
-      steps[index].current = current;
-      steps[index].completed = completed;
-      setProcessingSteps([...steps]);
-    };
-
-    try {
-      // Step 1: Upload simulation
-      updateStep(0, true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      updateStep(0, false, true);
-
-      // Step 2: Extract text simulation
-      updateStep(1, true);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      updateStep(1, false, true);
-
-      // Step 3-5: Actual API call (these steps will progress during API processing)
-      updateStep(2, true);
-
-      // Make the actual API call
-      const response = await analyzeDocumentRequest(file);
-
-      // Complete analysis step
-      updateStep(2, false, true);
-
-      // Step 4: Identify key clauses
-      updateStep(3, true);
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      updateStep(3, false, true);
-
-      // Step 5: Compile insights
-      updateStep(4, true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      updateStep(4, false, true);
-
-      // Store the API response and transition to results
-      setApiResponse(response);
-      setTimeout(() => {
-        setAppState("results");
-      }, 500);
-    } catch (err) {
-      console.error("Error processing document:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An unexpected error occurred while processing your document. Please try again."
-      );
-      setAppState("error");
-    }
-  };
-
-  const handleNewDocument = () => {
-    setAppState("upload");
-    setUploadedFile(null);
-    setApiResponse(null);
-    setError(null);
-    setProcessingSteps(
-      processingSteps.map((step) => ({
-        ...step,
-        completed: false,
-        current: false,
-      }))
-    );
-  };
-
-  const handleRetry = () => {
-    if (uploadedFile) {
-      setAppState("processing");
-      setError(null);
-      setProcessingSteps(
-        processingSteps.map((step) => ({
-          ...step,
-          completed: false,
-          current: false,
-        }))
-      );
-      processDocumentWithAPI(uploadedFile);
-    }
-  };
+  const {
+    appState,
+    uploadedFile,
+    apiResponse,
+    error,
+    processingSteps,
+    handleFileUpload,
+    handleNewDocument,
+    handleRetry,
+  } = useDocumentAnalysis();
 
   return (
     <div className="min-h-screen bg-neutral-100 flex flex-col">

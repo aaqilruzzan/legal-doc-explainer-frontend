@@ -1,17 +1,6 @@
 import React from "react";
 import { Loader2, CheckCircle, Clock } from "lucide-react";
-
-interface ProcessingStep {
-  id: string;
-  label: string;
-  completed: boolean;
-  current: boolean;
-}
-
-interface ProcessingStateProps {
-  steps: ProcessingStep[];
-  fileName: string;
-}
+import { ProcessingStateProps } from "../types/interfaces";
 
 const ProcessingState: React.FC<ProcessingStateProps> = ({
   steps,

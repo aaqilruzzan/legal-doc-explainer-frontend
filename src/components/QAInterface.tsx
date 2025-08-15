@@ -3,55 +3,26 @@ import {
   Send,
   MessageCircle,
   Bookmark,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   ExternalLink,
   Lightbulb,
 } from "lucide-react";
 import { askQuestionRequest } from "../api/analyzeRequest";
-
-interface Message {
-  id: string;
-  type: "question" | "answer";
-  content: string;
-  timestamp: Date;
-  confidence?: "low" | "medium" | "high";
-  sourcePages?: number[];
-  requiresLawyer?: boolean;
-  saved?: boolean;
-  isLoading?: boolean;
-}
-
-interface QAInterfaceProps {
-  namespace?: string; // Document namespace from analysis
-}
+import { Message, QAInterfaceProps } from "../types/interfaces";
+import { suggestedQuestions } from "../utils/qaUtils";
 
 const QAInterface: React.FC<QAInterfaceProps> = ({ namespace }) => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
 
-  const suggestedQuestions = [
-    "What are the penalties for late payment?",
-    "How does auto-renewal work?",
-    "What happens if I breach the contract?",
-    "Can the other party change the terms?",
-    "What are my intellectual property rights?",
-    "How are disputes resolved?",
-  ];
-
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    // If no namespace is provided, show a message that document needs to be analyzed first
     if (!namespace) {
       const errorMessage: Message = {
         id: `error_${Date.now()}`,
         type: "answer",
         content: "Please analyze a document first before asking questions.",
         timestamp: new Date(),
-        confidence: "low",
-        requiresLawyer: false,
       };
       setMessages((prev) => [...prev, errorMessage]);
       return;
@@ -64,7 +35,7 @@ const QAInterface: React.FC<QAInterfaceProps> = ({ namespace }) => {
       timestamp: new Date(),
     };
 
-    // Add loading answer immediately
+    // Adding loading answer immediately
     const loadingAnswer: Message = {
       id: `a_${Date.now()}`,
       type: "answer",
@@ -78,24 +49,21 @@ const QAInterface: React.FC<QAInterfaceProps> = ({ namespace }) => {
     setInput("");
 
     try {
-      // Make API call to ask question
+      // Making API call to ask question
       const response = await askQuestionRequest(currentInput, namespace);
 
-      // Replace loading message with actual answer
+      // Replacing loading message with actual answer
       const actualAnswer: Message = {
         id: `a_${Date.now()}`,
         type: "answer",
         content: response.answer,
         timestamp: new Date(),
-        confidence: "high", // Could be derived from API response if available
-        requiresLawyer: false, // Could be derived from API response if available
       };
 
       setMessages((prev) =>
         prev.map((msg) => (msg.isLoading ? actualAnswer : msg))
       );
     } catch (error) {
-      // Replace loading message with error
       const errorAnswer: Message = {
         id: `a_${Date.now()}`,
         type: "answer",
@@ -104,8 +72,6 @@ const QAInterface: React.FC<QAInterfaceProps> = ({ namespace }) => {
             ? `Sorry, I couldn't process your question: ${error.message}`
             : "Sorry, I encountered an error while processing your question. Please try again.",
         timestamp: new Date(),
-        confidence: "low",
-        requiresLawyer: false,
       };
 
       setMessages((prev) =>
@@ -124,19 +90,6 @@ const QAInterface: React.FC<QAInterfaceProps> = ({ namespace }) => {
         msg.id === messageId ? { ...msg, saved: !msg.saved } : msg
       )
     );
-  };
-
-  const getConfidenceColor = (confidence: Message["confidence"]) => {
-    switch (confidence) {
-      case "high":
-        return "text-success-700 bg-success-100";
-      case "medium":
-        return "text-warning-700 bg-warning-100";
-      case "low":
-        return "text-accent-700 bg-accent-100";
-      default:
-        return "text-neutral-700 bg-neutral-100";
-    }
   };
 
   return (
@@ -207,37 +160,8 @@ const QAInterface: React.FC<QAInterfaceProps> = ({ namespace }) => {
 
                   {message.type === "answer" && (
                     <div className="space-y-3">
-                      {/* Confidence and Source Info */}
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center space-x-2">
-                          {message.confidence && (
-                            <span
-                              className={`px-2 py-1 rounded-full font-medium ${getConfidenceColor(
-                                message.confidence
-                              )}`}
-                            >
-                              {message.confidence === "high" && (
-                                <CheckCircle className="w-3 h-3 inline mr-1" />
-                              )}
-                              {message.confidence === "medium" && (
-                                <Clock className="w-3 h-3 inline mr-1" />
-                              )}
-                              {message.confidence === "low" && (
-                                <AlertCircle className="w-3 h-3 inline mr-1" />
-                              )}
-                              {message.confidence} confidence
-                            </span>
-                          )}
-                          {message.sourcePages && (
-                            <span className="text-neutral-500">
-                              Source: Pages {message.sourcePages.join(", ")}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
                       {/* Actions */}
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center space-x-3">
                           <button
                             onClick={() => toggleSaveAnswer(message.id)}
@@ -262,13 +186,13 @@ const QAInterface: React.FC<QAInterfaceProps> = ({ namespace }) => {
                             <ExternalLink className="w-3 h-3" />
                             <span>View in document</span>
                           </button>
-                        </div>
 
-                        {message.requiresLawyer && (
-                          <button className="px-2 py-1 bg-accent-100 text-accent-700 text-xs font-medium rounded-md hover:bg-accent-200 transition-colors duration-200">
-                            Consult Lawyer
-                          </button>
-                        )}
+                          {message.sourcePages && (
+                            <span className="text-neutral-500">
+                              Source: Pages {message.sourcePages.join(", ")}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

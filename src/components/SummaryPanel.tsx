@@ -8,14 +8,8 @@ import {
   ChevronDown,
   ChevronRight,
   BookOpen,
-  Info,
 } from "lucide-react";
-import { AnalyzeDocumentResponse } from "../api/types";
-
-interface SummaryPanelProps {
-  analysisData: AnalyzeDocumentResponse;
-  onGenerateRisks?: () => void;
-}
+import { SummaryPanelProps } from "../types/interfaces";
 
 const SummaryPanel: React.FC<SummaryPanelProps> = ({
   analysisData,
@@ -23,18 +17,18 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({
 }) => {
   const [showGlossary, setShowGlossary] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [isRisksGenerated, setIsRisksGenerated] = useState(false);
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
   };
 
-  // Extract data from API response
+  // Extracting data from API response
   const { summary } = analysisData;
-  console.log("Summary Data:", summary);
   const { important_contract_terms, key_data_points, legal_terms_glossary } =
     summary;
 
-  // Convert glossary object to array for rendering
+  // Converting glossary object to array for rendering
   const glossaryTerms = Object.entries(legal_terms_glossary).map(
     ([term, definition]) => ({
       term,
@@ -42,7 +36,7 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({
     })
   );
 
-  // Split summary by line breaks to preserve original formatting
+  // Splitting summary by line breaks to preserve original formatting
   const summaryLines = summary.summary
     .split("\n")
     .filter((line) => line.trim().length > 0);
@@ -224,63 +218,7 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({
           </div>
 
           {/* Document Type Section */}
-          <div className="border border-neutral-200 rounded-lg">
-            <button
-              onClick={() => toggleSection("type")}
-              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-neutral-50 transition-colors duration-200"
-            >
-              <div className="flex items-center space-x-3">
-                <Info className="w-4 h-4 text-neutral-600" />
-                <span className="font-medium text-neutral-900">
-                  Document Classification
-                </span>
-              </div>
-              {expandedSection === "type" ? (
-                <ChevronDown className="w-4 h-4 text-neutral-500" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-neutral-500" />
-              )}
-            </button>
-
-            {expandedSection === "type" && (
-              <div className="px-4 pb-4 border-t border-neutral-200 bg-neutral-50/50 pt-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">
-                      Document Type:
-                    </span>
-                    <span className="text-sm font-medium text-primary-900">
-                      Service Agreement
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">
-                      Complexity Level:
-                    </span>
-                    <span className="text-sm font-medium text-success-600">
-                      Standard
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">
-                      Page Count:
-                    </span>
-                    <span className="text-sm font-medium text-neutral-900">
-                      12 pages
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-600">
-                      Last Modified:
-                    </span>
-                    <span className="text-sm font-medium text-neutral-900">
-                      December 15, 2024
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <div className="border border-neutral-200 rounded-lg"></div>
         </div>
 
         {/* Glossary Toggle */}
@@ -320,8 +258,18 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({
         {/* Action Button */}
         <div className="pt-4 border-t border-neutral-200">
           <button
-            onClick={onGenerateRisks}
-            className="w-full py-3 px-4 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors duration-200 font-medium"
+            onClick={() => {
+              if (onGenerateRisks && !isRisksGenerated) {
+                onGenerateRisks();
+                setIsRisksGenerated(true);
+              }
+            }}
+            disabled={isRisksGenerated}
+            className={`w-full py-3 px-4 rounded-lg transition-colors duration-200 font-medium ${
+              isRisksGenerated
+                ? "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                : "bg-primary-900 text-white hover:bg-primary-800"
+            }`}
           >
             Generate Risks and Highlights
           </button>

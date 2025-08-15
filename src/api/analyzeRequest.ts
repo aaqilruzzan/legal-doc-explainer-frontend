@@ -15,7 +15,6 @@ export const analyzeDocumentRequest = async (
   const formData = new FormData();
   formData.append("file", documentFile);
 
-  // Create an AbortController for timeout handling
   const abortController = new AbortController();
   const timeoutId = setTimeout(
     () => abortController.abort(),
@@ -58,7 +57,6 @@ export const analyzeDocumentRequest = async (
   }
 };
 
-// Ask follow-up question about analyzed document
 export const askQuestionRequest = async (
   query: string,
   namespace: string
@@ -68,7 +66,6 @@ export const askQuestionRequest = async (
     namespace,
   };
 
-  // Create an AbortController for timeout handling
   const abortController = new AbortController();
   const timeoutId = setTimeout(
     () => abortController.abort(),
@@ -111,7 +108,7 @@ export const askQuestionRequest = async (
   }
 };
 
-// Get document highlights and key clauses analysis
+// Getting document highlights and key clauses analysis
 export const getDocumentHighlights = async (
   namespace: string
 ): Promise<HighlightsResponse> => {
@@ -119,7 +116,7 @@ export const getDocumentHighlights = async (
     namespace,
   };
 
-  // Create an AbortController for timeout handling
+  // Creating an AbortController for timeout handling
   const abortController = new AbortController();
   const timeoutId = setTimeout(
     () => abortController.abort(),

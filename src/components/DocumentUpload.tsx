@@ -1,29 +1,18 @@
-import React, { useState, useRef } from 'react';
-import { Upload, FileText, AlertCircle, CheckCircle, Shield } from 'lucide-react';
-
-interface DocumentUploadProps {
-  onFileUpload: (file: File) => void;
-}
+import React, { useState, useRef } from "react";
+import {
+  Upload,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  Shield,
+} from "lucide-react";
+import { DocumentUploadProps } from "../types/interfaces";
+import { validateFile } from "../utils/documentUtils";
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileUpload }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const validateFile = (file: File): string | null => {
-    const maxSize = 20 * 1024 * 1024; // 20MB
-    const allowedTypes = ['application/pdf'];
-
-    if (!allowedTypes.includes(file.type)) {
-      return 'Please upload a PDF file only.';
-    }
-
-    if (file.size > maxSize) {
-      return 'File size must be less than 20MB.';
-    }
-
-    return null;
-  };
 
   const handleFileSelect = (file: File) => {
     const validationError = validateFile(file);
@@ -88,7 +77,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileUpload }) => {
           AI Legal Document Explainer
         </h1>
         <p className="text-xl text-neutral-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-          Upload your legal document and get instant plain-English explanations, 
+          Upload your legal document and get instant plain-English explanations,
           risk analysis, and answers to your questions.
         </p>
       </div>
@@ -98,9 +87,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileUpload }) => {
         <div
           className={`
             relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 cursor-pointer
-            ${isDragOver 
-              ? 'border-primary-500 bg-primary-50 scale-[1.02]' 
-              : 'border-neutral-300 bg-white hover:border-primary-400 hover:bg-neutral-50'
+            ${
+              isDragOver
+                ? "border-primary-500 bg-primary-50 scale-[1.02]"
+                : "border-neutral-300 bg-white hover:border-primary-400 hover:bg-neutral-50"
             }
           `}
           onDragEnter={handleDragEnter}
@@ -120,17 +110,25 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileUpload }) => {
 
           <div className="space-y-6">
             <div className="flex justify-center">
-              <div className={`
+              <div
+                className={`
                 flex items-center justify-center w-16 h-16 rounded-full transition-colors duration-300
-                ${isDragOver ? 'bg-primary-100' : 'bg-neutral-100'}
-              `}>
-                <Upload className={`w-8 h-8 ${isDragOver ? 'text-primary-600' : 'text-neutral-500'}`} />
+                ${isDragOver ? "bg-primary-100" : "bg-neutral-100"}
+              `}
+              >
+                <Upload
+                  className={`w-8 h-8 ${
+                    isDragOver ? "text-primary-600" : "text-neutral-500"
+                  }`}
+                />
               </div>
             </div>
 
             <div>
               <h3 className="text-xl font-semibold text-neutral-900 mb-2">
-                {isDragOver ? 'Drop your document here' : 'Upload Your Legal Document'}
+                {isDragOver
+                  ? "Drop your document here"
+                  : "Upload Your Legal Document"}
               </h3>
               <p className="text-neutral-600 mb-4">
                 Drag and drop your PDF file here, or click to browse
@@ -166,7 +164,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileUpload }) => {
           </div>
           <h3 className="font-semibold text-neutral-900 mb-2">PDF Only</h3>
           <p className="text-sm text-neutral-600">
-            Supports PDF documents up to 20MB in size
+            Supports PDF documents up to 16MB in size
           </p>
         </div>
 
@@ -174,7 +172,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileUpload }) => {
           <div className="flex justify-center mb-4">
             <Shield className="w-8 h-8 text-success-600" />
           </div>
-          <h3 className="font-semibold text-neutral-900 mb-2">Secure Processing</h3>
+          <h3 className="font-semibold text-neutral-900 mb-2">
+            Secure Processing
+          </h3>
           <p className="text-sm text-neutral-600">
             Your documents are processed securely and not stored
           </p>
@@ -184,7 +184,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileUpload }) => {
           <div className="flex justify-center mb-4">
             <CheckCircle className="w-8 h-8 text-success-600" />
           </div>
-          <h3 className="font-semibold text-neutral-900 mb-2">Instant Analysis</h3>
+          <h3 className="font-semibold text-neutral-900 mb-2">
+            Instant Analysis
+          </h3>
           <p className="text-sm text-neutral-600">
             Get comprehensive insights in seconds, not hours
           </p>
@@ -198,16 +200,19 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileUpload }) => {
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           {[
-            'Employment Contracts',
-            'Service Agreements',
-            'Lease Agreements',
-            'Privacy Policies',
-            'Terms of Service',
-            'NDAs',
-            'Partnership Agreements',
-            'Purchase Contracts'
+            "Employment Contracts",
+            "Service Agreements",
+            "Lease Agreements",
+            "Privacy Policies",
+            "Terms of Service",
+            "NDAs",
+            "Partnership Agreements",
+            "Purchase Contracts",
           ].map((type, index) => (
-            <div key={index} className="py-2 px-3 bg-white rounded-lg text-sm text-neutral-700 border border-neutral-200">
+            <div
+              key={index}
+              className="py-2 px-3 bg-white rounded-lg text-sm text-neutral-700 border border-neutral-200"
+            >
               {type}
             </div>
           ))}

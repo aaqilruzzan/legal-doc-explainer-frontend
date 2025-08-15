@@ -3,16 +3,9 @@ import DocumentViewer from "./DocumentViewer";
 import SummaryPanel from "./SummaryPanel";
 import RiskAnalysis from "./RiskAnalysis";
 import QAInterface from "./QAInterface";
-import { AnalyzeDocumentResponse } from "../api/types";
 import { Loader2 } from "lucide-react";
-
-interface ResultsDashboardProps {
-  fileName: string;
-  fileObject: File;
-  analysisData: AnalyzeDocumentResponse;
-}
-
-type RiskState = "hidden" | "loading" | "visible";
+import { RiskState } from "../types/types";
+import { ResultsDashboardProps } from "../types/interfaces";
 
 const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   fileName,
@@ -28,14 +21,11 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
     setRiskState("loading");
 
     try {
-      // The RiskAnalysis component will handle the actual API call
-      // We just need to trigger the visible state so it can load
-      // Add a small delay to show the loading state
+      // Adding a small delay to show the loading state
       await new Promise((resolve) => setTimeout(resolve, 500));
       setRiskState("visible");
     } catch (error) {
       console.error("Error generating risks:", error);
-      // On error, keep it hidden so user can try again
       setRiskState("hidden");
     }
   };
@@ -120,7 +110,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
             </div>
           )}
 
-          {/* Risk Analysis - Only show when visible */}
+          {/* Risk Analysis - Only shown when visible */}
           {riskState === "visible" && (
             <RiskAnalysis namespace={analysisData.namespace} />
           )}

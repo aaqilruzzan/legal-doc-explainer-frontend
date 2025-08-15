@@ -1,35 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   AlertTriangle,
-  Shield,
-  TrendingUp,
-  Clock,
-  DollarSign,
-  Users,
-  FileText,
   ChevronDown,
   ChevronRight,
   ExternalLink,
   Loader2,
+  FileText,
 } from "lucide-react";
-import { HighlightsResponse, RiskLevel } from "../api/types";
+import { HighlightsResponse } from "../api/types";
 import { getDocumentHighlights } from "../api/analyzeRequest";
-
-interface RiskItem {
-  id: string;
-  category: string;
-  title: string;
-  description: string;
-  severity: "low" | "medium" | "high" | "critical";
-  confidence: "low" | "medium" | "high";
-  pageReference: number;
-  recommendation: string;
-  requiresLawyer: boolean;
-}
-
-interface RiskAnalysisProps {
-  namespace: string;
-}
+import { RiskItem, RiskAnalysisProps } from "../types/interfaces";
+import { generateRiskAnalysisPDF } from "../utils/pdfGeneration";
+import {
+  transformHighlightsToRiskItems,
+  getSeverityColor,
+  getConfidenceText,
+  getRiskScoreLabel,
+} from "../utils/riskUtils";
+import { getSeverityIcon, getCategoryIcon } from "../utils/riskIconUtils";
 
 const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
   const [expandedRisk, setExpandedRisk] = useState<string | null>(null);
@@ -37,8 +25,28 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
     useState<HighlightsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
 
-  // Fetch highlights data from API
+  const generatePDF = async () => {
+    if (!riskItems) return;
+
+    try {
+      await generateRiskAnalysisPDF({
+        riskItems,
+        riskScore,
+        getRiskScoreLabel,
+        criticalRisks,
+        highRisks,
+        mediumRisks,
+        lowRisks,
+        risksByCategory,
+      });
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+    }
+  };
+
+  // Fetching highlights data from API
   useEffect(() => {
     const fetchHighlights = async () => {
       try {
@@ -61,128 +69,9 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
     }
   }, [namespace]);
 
-  // Transform highlights data to RiskItem format
-  const transformHighlightsToRiskItems = (
-    highlights: HighlightsResponse
-  ): RiskItem[] => {
-    const categoryMap: Record<string, string> = {
-      termination: "Termination Conditions",
-      financial: "Financial Obligations",
-      liability: "Liability Clauses",
-      renewal: "Renewal Terms",
-      service: "Service Delivery",
-    };
-
-    const mapRiskLevel = (
-      risk: RiskLevel
-    ): "low" | "medium" | "high" | "critical" => {
-      return risk === "critical" ? "critical" : risk;
-    };
-
-    return Object.entries(highlights).map(([key, clause], index) => ({
-      id: key,
-      category: categoryMap[key] || key,
-      title: clause.clause.heading,
-      description: clause.clause.description,
-      severity: mapRiskLevel(clause.risk),
-      confidence: clause.confidence,
-      pageReference: index + 2, // Mock page references
-      recommendation: clause.recommendation,
-      requiresLawyer: clause.risk === "high" || clause.risk === "critical",
-    }));
-  };
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="bg-white rounded-xl border border-neutral-200 p-8">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
-          <p className="text-neutral-600 font-medium">
-            Loading risk analysis...
-          </p>
-          <p className="text-sm text-neutral-500">
-            Analyzing document risks and highlights
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="bg-white rounded-xl border border-neutral-200 p-8">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <AlertTriangle className="w-8 h-8 text-red-500" />
-          <p className="text-red-600 font-medium">
-            Error loading risk analysis
-          </p>
-          <p className="text-sm text-neutral-500">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show message if no data
-  if (!highlightsData) {
-    return (
-      <div className="bg-white rounded-xl border border-neutral-200 p-8">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <FileText className="w-8 h-8 text-neutral-400" />
-          <p className="text-neutral-600 font-medium">No risk data available</p>
-          <p className="text-sm text-neutral-500">
-            Unable to analyze document risks
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const riskItems: RiskItem[] = transformHighlightsToRiskItems(highlightsData);
-
-  const getSeverityColor = (severity: RiskItem["severity"]) => {
-    switch (severity) {
-      case "low":
-        return "text-success-700 bg-success-50 border-success-200";
-      case "medium":
-        return "text-warning-700 bg-warning-50 border-warning-200";
-      case "high":
-        return "text-accent-700 bg-accent-50 border-accent-200";
-      case "critical":
-        return "text-red-700 bg-red-50 border-red-200";
-    }
-  };
-
-  const getSeverityIcon = (severity: RiskItem["severity"]) => {
-    switch (severity) {
-      case "low":
-        return <Shield className="w-4 h-4" />;
-      case "medium":
-        return <Clock className="w-4 h-4" />;
-      case "high":
-        return <AlertTriangle className="w-4 h-4" />;
-      case "critical":
-        return <AlertTriangle className="w-4 h-4" />;
-    }
-  };
-
-  const getConfidenceText = (confidence: RiskItem["confidence"]) => {
-    switch (confidence) {
-      case "low":
-        return "Low Confidence";
-      case "medium":
-        return "Medium Confidence";
-      case "high":
-        return "High Confidence";
-    }
-  };
+  const riskItems: RiskItem[] = highlightsData
+    ? transformHighlightsToRiskItems(highlightsData)
+    : [];
 
   const toggleRisk = (id: string) => {
     setExpandedRisk(expandedRisk === id ? null : id);
@@ -195,23 +84,6 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
     acc[risk.category].push(risk);
     return acc;
   }, {} as Record<string, RiskItem[]>);
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Termination Conditions":
-        return <Clock className="w-5 h-5" />;
-      case "Financial Obligations":
-        return <DollarSign className="w-5 h-5" />;
-      case "Liability Clauses":
-        return <Shield className="w-5 h-5" />;
-      case "Renewal Terms":
-        return <TrendingUp className="w-5 h-5" />;
-      case "Service Delivery":
-        return <Users className="w-5 h-5" />;
-      default:
-        return <FileText className="w-5 h-5" />;
-    }
-  };
 
   const criticalRisks = riskItems.filter(
     (risk) => risk.severity === "critical"
@@ -237,7 +109,7 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
       low: 0.6,
     };
 
-    // Calculate weighted base score
+    // Calculating weighted base score
     let totalScore = 0;
     let maxPossibleScore = 0;
 
@@ -255,7 +127,7 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
     const lawyerRequiredFactor =
       riskItems.filter((risk) => risk.requiresLawyer).length / riskItems.length;
 
-    // Apply modifiers
+    // Applying modifiers
     totalScore *= 1 + categoryDiversityFactor * 0.1; // 10% bonus for category diversity
     totalScore *= 1 + lawyerRequiredFactor * 0.2; // 20% bonus for lawyer-required items
 
@@ -268,41 +140,69 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
     return Math.round(normalizedScore);
   };
 
-  const getRiskScoreLabel = (score: number) => {
-    if (score >= 80)
-      return { label: "Critical", color: "text-red-600", bgColor: "bg-red-50" };
-    if (score >= 65)
-      return { label: "High", color: "text-red-500", bgColor: "bg-red-50" };
-    if (score >= 50)
-      return {
-        label: "Medium-High",
-        color: "text-accent-600",
-        bgColor: "bg-accent-50",
-      };
-    if (score >= 35)
-      return {
-        label: "Medium",
-        color: "text-warning-600",
-        bgColor: "bg-warning-50",
-      };
-    if (score >= 20)
-      return {
-        label: "Low-Medium",
-        color: "text-warning-500",
-        bgColor: "bg-warning-50",
-      };
-    return {
-      label: "Low",
-      color: "text-success-600",
-      bgColor: "bg-success-50",
-    };
-  };
-
   const riskScore = calculateRiskScore();
   const riskScoreData = getRiskScoreLabel(riskScore);
 
+  // Using the imported utility function for risk transformation
+
+  // Showing loading state
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl border border-neutral-200 p-8">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+          <p className="text-neutral-600 font-medium">
+            Loading risk analysis...
+          </p>
+          <p className="text-sm text-neutral-500">
+            Analyzing document risks and highlights
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Showing error state
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl border border-neutral-200 p-8">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <AlertTriangle className="w-8 h-8 text-red-500" />
+          <p className="text-red-600 font-medium">
+            Error loading risk analysis
+          </p>
+          <p className="text-sm text-neutral-500">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Showing message if no data
+  if (!highlightsData) {
+    return (
+      <div className="bg-white rounded-xl border border-neutral-200 p-8">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <FileText className="w-8 h-8 text-neutral-400" />
+          <p className="text-neutral-600 font-medium">No risk data available</p>
+          <p className="text-sm text-neutral-500">
+            Unable to analyze document risks
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+    <div
+      ref={reportRef}
+      className="bg-white rounded-xl border border-neutral-200 overflow-hidden"
+    >
       {/* Header */}
       <div className="px-6 py-4 border-b border-neutral-200 bg-neutral-50">
         <div className="flex items-center justify-between">
@@ -408,9 +308,6 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
                         </div>
                         <div className="flex items-center space-x-3 ml-4">
                           <div className="text-right">
-                            <div className="text-xs text-neutral-500 mb-1">
-                              Page {risk.pageReference}
-                            </div>
                             <div className="text-xs text-neutral-600">
                               {getConfidenceText(risk.confidence)}
                             </div>
@@ -448,9 +345,6 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
 
                           <div className="flex items-center justify-between pt-2">
                             <div className="flex items-center space-x-2">
-                              <span className="text-xs text-neutral-500">
-                                Found on page {risk.pageReference}
-                              </span>
                               <button className="text-xs text-primary-600 hover:text-primary-800 transition-colors duration-200 flex items-center space-x-1">
                                 <span>View in document</span>
                                 <ExternalLink className="w-3 h-3" />
@@ -473,12 +367,12 @@ const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
           ))}
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 pt-6 border-t border-neutral-200 space-y-3">
-          <button className="w-full py-3 px-4 bg-accent-600 text-white rounded-lg hover:bg-accent-700 transition-colors duration-200 font-medium">
-            Get Professional Legal Review
-          </button>
-          <button className="w-full py-2 px-4 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-200">
+        {/* Action Button */}
+        <div className="mt-8 pt-6 border-t border-neutral-200">
+          <button
+            onClick={generatePDF}
+            className="w-full py-2 px-4 border border-neutral-300 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors duration-200"
+          >
             Download Risk Report (PDF)
           </button>
         </div>

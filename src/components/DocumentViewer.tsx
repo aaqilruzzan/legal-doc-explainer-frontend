@@ -10,23 +10,18 @@ import {
   ZoomOut,
   Download,
 } from "lucide-react";
+import {
+  DocumentViewerProps,
+  ZoomControlsProps,
+  PageNavigationProps,
+  DocumentActionsProps,
+  ToolbarProps,
+} from "../types/interfaces";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url
 ).toString();
-
-interface DocumentViewerProps {
-  fileName: string;
-  fileObject: File;
-}
-
-// Zoom Controls Component
-interface ZoomControlsProps {
-  scale: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-}
 
 const ZoomControls: React.FC<ZoomControlsProps> = ({
   scale,
@@ -55,14 +50,6 @@ const ZoomControls: React.FC<ZoomControlsProps> = ({
     </button>
   </div>
 );
-
-// Page Navigation Component
-interface PageNavigationProps {
-  pageNumber: number;
-  numPages: number;
-  onPreviousPage: () => void;
-  onNextPage: () => void;
-}
 
 const PageNavigation: React.FC<PageNavigationProps> = ({
   pageNumber,
@@ -93,11 +80,6 @@ const PageNavigation: React.FC<PageNavigationProps> = ({
   </div>
 );
 
-// Document Actions Component
-interface DocumentActionsProps {
-  onDownload: () => void;
-}
-
 const DocumentActions: React.FC<DocumentActionsProps> = ({ onDownload }) => (
   <div className="flex items-center space-x-2">
     <button
@@ -109,18 +91,6 @@ const DocumentActions: React.FC<DocumentActionsProps> = ({ onDownload }) => (
     </button>
   </div>
 );
-
-// Toolbar Component
-interface ToolbarProps {
-  scale: number;
-  pageNumber: number;
-  numPages: number;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onPreviousPage: () => void;
-  onNextPage: () => void;
-  onDownload: () => void;
-}
 
 const Toolbar: React.FC<ToolbarProps> = ({
   scale,
