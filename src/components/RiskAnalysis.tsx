@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertTriangle,
   Shield,
@@ -10,8 +10,10 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { HighlightsResponse, RiskLevel } from "../api/types";
+import { getDocumentHighlights } from "../api/analyzeRequest";
 
 interface RiskItem {
   id: string;
@@ -25,64 +27,41 @@ interface RiskItem {
   requiresLawyer: boolean;
 }
 
-const RiskAnalysis: React.FC = () => {
+interface RiskAnalysisProps {
+  namespace: string;
+}
+
+const RiskAnalysis: React.FC<RiskAnalysisProps> = ({ namespace }) => {
   const [expandedRisk, setExpandedRisk] = useState<string | null>(null);
+  const [highlightsData, setHighlightsData] =
+    useState<HighlightsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock highlights data - will be replaced with API call later
-  const mockHighlightsData: HighlightsResponse = {
-    termination: {
-      clause: {
-        heading: "Contract Termination",
-        description:
-          "Either party may terminate with 30 days written notice without cause",
-      },
-      recommendation: "Review notice requirements carefully",
-      risk: "medium",
-      confidence: "high",
-    },
-    financial: {
-      clause: {
-        heading: "Payment Terms",
-        description:
-          "Monthly payments of $10,000 due within 30 days of invoice",
-      },
-      recommendation: "Negotiate payment schedule flexibility",
-      risk: "low",
-      confidence: "high",
-    },
-    liability: {
-      clause: {
-        heading: "Limitation of Liability",
-        description:
-          "Liability capped at total contract value with mutual indemnification",
-      },
-      recommendation: "Consider additional insurance coverage",
-      risk: "medium",
-      confidence: "high",
-    },
-    renewal: {
-      clause: {
-        heading: "Auto-Renewal Clause",
-        description:
-          "Contract automatically renews for one year unless terminated with notice",
-      },
-      recommendation: "Set calendar reminder for renewal",
-      risk: "low",
-      confidence: "high",
-    },
-    service: {
-      clause: {
-        heading: "Service Level Agreement",
-        description:
-          "99.9% uptime guarantee with defined response times for support",
-      },
-      recommendation: "Monitor SLA compliance metrics",
-      risk: "medium",
-      confidence: "high",
-    },
-  };
+  // Fetch highlights data from API
+  useEffect(() => {
+    const fetchHighlights = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getDocumentHighlights(namespace);
+        setHighlightsData(data);
+      } catch (err) {
+        console.error("Error fetching highlights:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load highlights"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Transform mock highlights data to RiskItem format
+    if (namespace) {
+      fetchHighlights();
+    }
+  }, [namespace]);
+
+  // Transform highlights data to RiskItem format
   const transformHighlightsToRiskItems = (
     highlights: HighlightsResponse
   ): RiskItem[] => {
@@ -113,8 +92,60 @@ const RiskAnalysis: React.FC = () => {
     }));
   };
 
-  const riskItems: RiskItem[] =
-    transformHighlightsToRiskItems(mockHighlightsData);
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl border border-neutral-200 p-8">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+          <p className="text-neutral-600 font-medium">
+            Loading risk analysis...
+          </p>
+          <p className="text-sm text-neutral-500">
+            Analyzing document risks and highlights
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl border border-neutral-200 p-8">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <AlertTriangle className="w-8 h-8 text-red-500" />
+          <p className="text-red-600 font-medium">
+            Error loading risk analysis
+          </p>
+          <p className="text-sm text-neutral-500">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if no data
+  if (!highlightsData) {
+    return (
+      <div className="bg-white rounded-xl border border-neutral-200 p-8">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <FileText className="w-8 h-8 text-neutral-400" />
+          <p className="text-neutral-600 font-medium">No risk data available</p>
+          <p className="text-sm text-neutral-500">
+            Unable to analyze document risks
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const riskItems: RiskItem[] = transformHighlightsToRiskItems(highlightsData);
 
   const getSeverityColor = (severity: RiskItem["severity"]) => {
     switch (severity) {

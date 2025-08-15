@@ -24,13 +24,20 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   );
   const [riskState, setRiskState] = useState<RiskState>("hidden");
 
-  const handleGenerateRisks = () => {
+  const handleGenerateRisks = async () => {
     setRiskState("loading");
 
-    // Simulate API call delay - replace with actual API call later
-    setTimeout(() => {
+    try {
+      // The RiskAnalysis component will handle the actual API call
+      // We just need to trigger the visible state so it can load
+      // Add a small delay to show the loading state
+      await new Promise((resolve) => setTimeout(resolve, 500));
       setRiskState("visible");
-    }, 3000); // 3 second delay to simulate loading
+    } catch (error) {
+      console.error("Error generating risks:", error);
+      // On error, keep it hidden so user can try again
+      setRiskState("hidden");
+    }
   };
 
   return (
@@ -114,7 +121,9 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           )}
 
           {/* Risk Analysis - Only show when visible */}
-          {riskState === "visible" && <RiskAnalysis />}
+          {riskState === "visible" && (
+            <RiskAnalysis namespace={analysisData.namespace} />
+          )}
 
           {/* Q&A Interface - Always visible, but positioned based on risk state */}
           <QAInterface namespace={analysisData.namespace} />
@@ -151,7 +160,9 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           </div>
         )}
 
-        {activeTab === "risks" && riskState === "visible" && <RiskAnalysis />}
+        {activeTab === "risks" && riskState === "visible" && (
+          <RiskAnalysis namespace={analysisData.namespace} />
+        )}
 
         {activeTab === "qa" && (
           <QAInterface namespace={analysisData.namespace} />
