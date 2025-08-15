@@ -29,6 +29,14 @@ A modern React application for analyzing legal documents using AI. The applicati
 - Node.js (v16 or higher)
 - npm or yarn
 
+### Environment Variables
+
+The following environment variables are required:
+
+- `VITE_API_BASE_URL`: The base URL of the backend API (default: http://localhost:5001)
+
+Create a `.env` file based on `.env.example` and adjust the values according to your setup.
+
 ### Installation
 
 1. Clone the repository:
